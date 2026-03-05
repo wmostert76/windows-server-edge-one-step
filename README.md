@@ -1,29 +1,25 @@
-﻿# Windows Server Edge One Step
+# OneStep Terminal Installer (Edge Only)
 
-## Overview
-- Repository: $name
-- Owner: wmostert76
-- Default branch: $branch
+Unattended script voor Windows Server zonder winget:
+- Installeert nieuwste Microsoft Edge Enterprise Stable
+- Verwijdert 3rd-party browsers (Firefox, Chrome, Chromium, Brave, Vivaldi, Opera)
+- Zet Edge als standaard browser
 
-## Features
-- Consistente repo-opmaak
-- Automatische versie-releases
-- Automatische changelog updates
+## Actieve one-step installatie (Administrator PowerShell)
 
-## Getting Started
-`ash
-git clone https://github.com/wmostert76/windows-server-edge-one-step.git
-cd windows-server-edge-one-step
-`
+```powershell
+irm "https://raw.githubusercontent.com/wmostert76/OneStep-Terminal-Installer/master/one-step-install.ps1" | iex
+```
 
-## Usage
-- Werk op de default branch voor standaard release-flow.
-- Elke push triggert automatische versieverhoging en release-notes.
+## Lokale run
 
-## Contributing
-1. Maak je wijziging.
-2. Commit en push.
-3. Controleer de Actions en release-output.
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force
+.\one-step-install.ps1
+```
 
-## License
-Proprietary (tenzij anders aangegeven).
+## Auto version releases
+
+Elke push naar `master` maakt automatisch:
+- een nieuwe tag (`vX.Y.Z`, patch +1)
+- een GitHub Release met release notes
