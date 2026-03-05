@@ -90,6 +90,19 @@ function Get-EdgeMsiInfo {
     }
 }
 
+function Test-EdgeInstalled {
+    $edgeExePaths = @(
+        "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        "C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+    )
+    foreach ($p in $edgeExePaths) {
+        if (Test-Path -Path $p) { return $true }
+    }
+
+    $edgeEntry = Get-UninstallEntries | Where-Object { $_.DisplayName -like "*Microsoft Edge*" } | Select-Object -First 1
+    return [bool]$edgeEntry
+}
+
 function Install-EdgeLatest {
     $workDir = "C:\ProgramData\EdgeDeploy"
     New-Item -Path $workDir -ItemType Directory -Force | Out-Null
@@ -134,7 +147,13 @@ function Set-EdgeDefaultBrowser {
 }
 
 Write-Log "Start unattended Edge + browser cleanup script"
-$dir = Install-EdgeLatest
+$dir = "C:\ProgramData\EdgeDeploy"
+if (Test-EdgeInstalled) {
+    Write-Log "Microsoft Edge gedetecteerd. Installatie wordt overgeslagen."
+}
+else {
+    $dir = Install-EdgeLatest
+}
 Remove-OtherBrowsers
 Set-EdgeDefaultBrowser -workDir $dir
 Write-Log "Klaar. Herstart aanbevolen."
