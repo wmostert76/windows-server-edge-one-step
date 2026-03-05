@@ -17,3 +17,9 @@ irm "https://raw.githubusercontent.com/wmostert76/OneStep-Terminal-Installer/mas
 Set-ExecutionPolicy Bypass -Scope Process -Force
 .\one-step-install.ps1
 ```
+
+## Auto version releases
+
+Elke push naar `master` maakt automatisch:
+- een nieuwe tag (`vX.Y.Z`, patch +1)
+- een GitHub Release met release notes

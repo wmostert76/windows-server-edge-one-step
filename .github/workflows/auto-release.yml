@@ -1,0 +1,47 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate next version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="$(git tag -l 'v*' --sort=-v:refname | head -n 1)"
+          if [[ -z "$latest" ]]; then
+            next="v0.1.0"
+          else
+            raw="${latest#v}"
+            IFS='.' read -r major minor patch <<< "$raw"
+            patch=$((patch + 1))
+            next="v${major}.${minor}.${patch}"
+          fi
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.next }}"
+          git push origin "${{ steps.version.outputs.next }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.next }}
+          generate_release_notes: true
