@@ -1,4 +1,4 @@
-name: Update Changelog
+﻿name: Update Changelog
 
 on:
   release:
@@ -11,24 +11,34 @@ jobs:
   changelog:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout master
+      - name: Checkout default branch
         uses: actions/checkout@v4
         with:
           ref: master
 
-      - name: Update CHANGELOG.md from release notes
+      - name: Ensure CHANGELOG.md exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f CHANGELOG.md ]]; then
+            echo "# Changelog" > CHANGELOG.md
+            echo >> CHANGELOG.md
+            echo "Alle wijzigingen per release worden hier automatisch bijgehouden." >> CHANGELOG.md
+            echo >> CHANGELOG.md
+          fi
+
+      - name: Prepend latest release notes
         shell: bash
         run: |
           set -euo pipefail
           TAG="${{ github.event.release.tag_name }}"
           DATE="$(date -u +%Y-%m-%d)"
-
           NOTES_FILE="$(mktemp)"
           printf "%s" '${{ github.event.release.body }}' > "$NOTES_FILE"
 
           TMP_FILE="$(mktemp)"
           {
-            echo "## $TAG - $DATE"
+            echo "## ${TAG} - ${DATE}"
             echo
             cat "$NOTES_FILE"
             echo
@@ -43,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           if git diff --quiet CHANGELOG.md; then
-            echo "No changelog changes."
+            echo "No changelog updates."
             exit 0
           fi
           git config user.name "github-actions[bot]"
