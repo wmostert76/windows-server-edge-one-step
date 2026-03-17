@@ -1,5 +1,13 @@
+$ScriptVersion = "0.0.3"
+
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+
+Write-Host ("=" * 60) -ForegroundColor Cyan
+Write-Host "  ONE STEP TERMINAL INSTALLER  v$ScriptVersion" -ForegroundColor Cyan
+Write-Host "  Setup in minutes. Clean. Repeatable." -ForegroundColor DarkCyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
+Write-Host ""
 
 $wid = [Security.Principal.WindowsIdentity]::GetCurrent()
 $wpr = New-Object Security.Principal.WindowsPrincipal($wid)

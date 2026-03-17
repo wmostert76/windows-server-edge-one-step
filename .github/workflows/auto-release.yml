@@ -1,4 +1,4 @@
-﻿name: Auto Release
+name: Auto Release
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
           set -euo pipefail
           latest="$(git tag -l 'v*' --sort=-v:refname | head -n 1)"
           if [[ -z "$latest" ]]; then
-            next="v1.0.0"
+            next="v0.0.3"
             range=""
           else
             raw="${latest#v}"
@@ -36,6 +36,21 @@ jobs:
           fi
           echo "next=$next" >> "$GITHUB_OUTPUT"
           echo "range=$range" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version in script
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.next }}"
+          version="${version#v}"
+          sed -i "s/^\\\$ScriptVersion = \"[^\"]*\"/\$ScriptVersion = \"${version}\"/" one-step-install.ps1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet one-step-install.ps1; then
+            git add one-step-install.ps1
+            git commit -m "chore: bump script version to ${version} [skip release]"
+            git push origin master
+          fi
 
       - name: Build release notes
         id: notes
