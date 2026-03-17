@@ -48,15 +48,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          file=release_notes.md
+          tag="${{ steps.version.outputs.tag }}"
           latest_tag="$(git tag -l 'v*' --sort=-v:refname | head -n 1)"
-          echo "## Changes" > "$file"
+          file=release_notes.md
+
+          echo "## Wijzigingen in ${tag}" > "$file"
           echo >> "$file"
+
           if [[ -z "$latest_tag" ]]; then
-            echo "- Initial release." >> "$file"
+            echo "- Eerste release." >> "$file"
           else
             git log --no-merges --pretty=format:'- %s (%h)' "${latest_tag}..HEAD" >> "$file"
           fi
+
           echo "file=$file" >> "$GITHUB_OUTPUT"
 
       - name: Create and push tag
@@ -69,7 +73,38 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check.outputs.exists == 'false'
+        id: release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           body_path: ${{ steps.notes.outputs.file }}
+
+      - name: Update CHANGELOG.md
+        if: steps.check.outputs.exists == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.tag }}"
+          date="$(date -u +%Y-%m-%d)"
+          notes_file="${{ steps.notes.outputs.file }}"
+
+          if [[ ! -f CHANGELOG.md ]]; then
+            printf '# Changelog\n\nAlle wijzigingen per release worden hier automatisch bijgehouden.\n\n' > CHANGELOG.md
+          fi
+
+          tmp="$(mktemp)"
+          {
+            echo "## ${tag} — ${date}"
+            echo
+            tail -n +2 "$notes_file"
+            echo
+            echo
+            cat CHANGELOG.md
+          } > "$tmp"
+          mv "$tmp" CHANGELOG.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: changelog bijgewerkt voor ${tag} [skip release]"
+          git push origin master
