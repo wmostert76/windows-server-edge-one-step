@@ -132,30 +132,52 @@ function Install-EdgeLatest {
 }
 
 function Set-EdgeTaskbarPin {
-    $edgePaths = @(
-        "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-        "C:\Program Files\Microsoft\Edge\Application\msedge.exe"
-    )
-    $edgePath = $edgePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-    if (-not $edgePath) {
-        Write-Log "Edge executable niet gevonden, taskbar pin overgeslagen."
-        return
+    param([string]$workDir)
+
+    $edgeLnk = "$env:ALLUSERSPROFILE\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk"
+
+    if (-not (Test-Path $edgeLnk)) {
+        $edgeExe = @(
+            "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            "C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+        ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+        if (-not $edgeExe) {
+            Write-Log "Edge niet gevonden, taskbar pin overgeslagen."
+            return
+        }
+
+        $wsh = New-Object -ComObject WScript.Shell
+        $lnk = $wsh.CreateShortcut($edgeLnk)
+        $lnk.TargetPath = $edgeExe
+        $lnk.Save()
     }
 
+    $layoutPath = Join-Path $workDir "TaskbarLayout.xml"
+    @"
+<?xml version="1.0" encoding="utf-8"?>
+<LayoutModificationTemplate
+    xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification"
+    xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
+    xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout"
+    xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout"
+    Version="1">
+  <CustomTaskbarLayoutCollection PinListPlacement="Merge">
+    <defaultlayout:TaskbarLayout>
+      <taskbar:TaskbarPinList>
+        <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" />
+      </taskbar:TaskbarPinList>
+    </defaultlayout:TaskbarLayout>
+  </CustomTaskbarLayoutCollection>
+</LayoutModificationTemplate>
+"@ | Set-Content -Path $layoutPath -Encoding UTF8
+
     try {
-        $shell = New-Object -ComObject Shell.Application
-        $folder = $shell.Namespace((Split-Path $edgePath))
-        $item = $folder.ParseName((Split-Path $edgePath -Leaf))
-        $verb = $item.Verbs() | Where-Object { $_.Name -match "taskbar|taakbalk" } | Select-Object -First 1
-        if ($verb) {
-            $verb.DoIt()
-            Write-Log "Edge vastgemaakt aan taakbalk."
-        } else {
-            Write-Log "Taskbar pin verb niet beschikbaar op dit systeem."
-        }
+        Import-StartLayout -LayoutPath $layoutPath -MountPath "$env:SystemDrive\"
+        Write-Log "Edge vastgemaakt aan taakbalk (actief bij volgende aanmelding)."
     }
     catch {
-        Write-Log "Kon Edge niet aan taakbalk vastmaken: $($_.Exception.Message)"
+        Write-Log "Taskbar pin mislukt: $($_.Exception.Message)"
     }
 }
 
@@ -193,5 +215,5 @@ else {
 }
 Remove-OtherBrowsers
 Set-EdgeDefaultBrowser -workDir $dir
-Set-EdgeTaskbarPin
+Set-EdgeTaskbarPin -workDir $dir
 Write-Log "Klaar. Herstart aanbevolen."
