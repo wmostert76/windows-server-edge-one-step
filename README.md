@@ -1,4 +1,4 @@
-# OneStep Edge Installer (Firefox Browser remove)
+# OneStep Edge Installer (Firefox & Chrome Browser remove)
 
 Unattended script voor Windows Server zonder winget:
 - Installeert nieuwste Microsoft Edge Enterprise Stable

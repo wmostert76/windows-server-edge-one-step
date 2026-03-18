@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 Write-Host ("=" * 60) -ForegroundColor Cyan
-Write-Host "  ONESTEP EDGE INSTALLER (FIREFOX BROWSER REMOVE)  v$ScriptVersion" -ForegroundColor Cyan
+Write-Host "  ONESTEP EDGE INSTALLER (FIREFOX & CHROME BROWSER REMOVE)  v$ScriptVersion" -ForegroundColor Cyan
 Write-Host "  Setup in minutes. Clean. Repeatable." -ForegroundColor DarkCyan
 Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host ""
