@@ -1,4 +1,4 @@
-$ScriptVersion = "0.0.7"
+$ScriptVersion = "0.0.8"
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
