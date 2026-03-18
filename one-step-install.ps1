@@ -131,6 +131,34 @@ function Install-EdgeLatest {
     return $workDir
 }
 
+function Set-EdgeTaskbarPin {
+    $edgePaths = @(
+        "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        "C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+    )
+    $edgePath = $edgePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $edgePath) {
+        Write-Log "Edge executable niet gevonden, taskbar pin overgeslagen."
+        return
+    }
+
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $folder = $shell.Namespace((Split-Path $edgePath))
+        $item = $folder.ParseName((Split-Path $edgePath -Leaf))
+        $verb = $item.Verbs() | Where-Object { $_.Name -match "taskbar|taakbalk" } | Select-Object -First 1
+        if ($verb) {
+            $verb.DoIt()
+            Write-Log "Edge vastgemaakt aan taakbalk."
+        } else {
+            Write-Log "Taskbar pin verb niet beschikbaar op dit systeem."
+        }
+    }
+    catch {
+        Write-Log "Kon Edge niet aan taakbalk vastmaken: $($_.Exception.Message)"
+    }
+}
+
 function Set-EdgeDefaultBrowser {
     param([string]$workDir)
 
@@ -165,4 +193,5 @@ else {
 }
 Remove-OtherBrowsers
 Set-EdgeDefaultBrowser -workDir $dir
+Set-EdgeTaskbarPin
 Write-Log "Klaar. Herstart aanbevolen."
