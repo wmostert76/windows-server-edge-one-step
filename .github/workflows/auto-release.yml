@@ -18,32 +18,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read version from script
+      - name: Bump patch version in script
         id: version
         shell: bash
         run: |
           set -euo pipefail
-          version="$(grep '^\$ScriptVersion' one-step-install.ps1 | head -n1 | sed 's/.*"\(.*\)".*/\1/')"
-          tag="v${version}"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          current="$(grep '^\$ScriptVersion' one-step-install.ps1 | head -n1 | sed 's/.*"\(.*\)".*/\1/')"
+          IFS='.' read -r major minor patch <<< "$current"
+          patch=$((patch + 1))
+          new="${major}.${minor}.${patch}"
+          sed -i "s/^\(\$ScriptVersion = \"\)${current}\"/\1${new}\"/" one-step-install.ps1
+          echo "version=$new" >> "$GITHUB_OUTPUT"
+          echo "tag=v${new}" >> "$GITHUB_OUTPUT"
 
-      - name: Check if tag already exists
-        id: check
+      - name: Commit version bump
         shell: bash
         run: |
-          set -euo pipefail
-          tag="${{ steps.version.outputs.tag }}"
-          if git rev-parse "$tag" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag $tag already exists — skipping release."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Tag $tag is new — proceeding with release."
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add one-step-install.ps1
+          git commit -m "chore: versie ophogen naar ${{ steps.version.outputs.version }} [skip release]"
+          git push origin master
 
       - name: Build release notes
-        if: steps.check.outputs.exists == 'false'
         id: notes
         shell: bash
         run: |
@@ -64,7 +61,6 @@ jobs:
           echo "file=$file" >> "$GITHUB_OUTPUT"
 
       - name: Create and push tag
-        if: steps.check.outputs.exists == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -72,15 +68,12 @@ jobs:
           git push origin "${{ steps.version.outputs.tag }}"
 
       - name: Create GitHub Release
-        if: steps.check.outputs.exists == 'false'
-        id: release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           body_path: ${{ steps.notes.outputs.file }}
 
       - name: Update CHANGELOG.md
-        if: steps.check.outputs.exists == 'false'
         shell: bash
         run: |
           set -euo pipefail
@@ -103,8 +96,6 @@ jobs:
           } > "$tmp"
           mv "$tmp" CHANGELOG.md
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md
           git commit -m "docs: changelog bijgewerkt voor ${tag} [skip release]"
           git push origin master
