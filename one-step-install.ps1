@@ -156,6 +156,7 @@ function Set-EdgeDefaultBrowser {
 
 Write-Log "Start unattended Edge + browser cleanup script"
 $dir = "C:\ProgramData\EdgeDeploy"
+New-Item -Path $dir -ItemType Directory -Force | Out-Null
 if (Test-EdgeInstalled) {
     Write-Log "Microsoft Edge gedetecteerd. Installatie wordt overgeslagen."
 }
