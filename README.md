@@ -8,7 +8,7 @@ Unattended script voor Windows Server zonder winget:
 ## Actieve one-step installatie (Administrator PowerShell)
 
 ```powershell
-irm "https://raw.githubusercontent.com/wmostert76/OneStep-Terminal-Installer/master/one-step-install.ps1" | iex
+irm "https://raw.githubusercontent.com/wmostert76/windows-server-edge-one-step/master/one-step-install.ps1" | iex
 ```
 
 ## Lokale run
