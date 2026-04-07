@@ -18,69 +18,49 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Bump patch version in script
+      - name: Determine next version
         id: version
         shell: bash
         run: |
           set -euo pipefail
-          current="$(grep '^\$ScriptVersion' one-step-install.ps1 | head -n1 | sed 's/.*"\(.*\)".*/\1/')"
+          latest_tag="$(git tag -l 'v*' --sort=-v:refname | head -n 1)"
+          if [[ -n "$latest_tag" ]]; then
+            current="${latest_tag#v}"
+          else
+            current="$(grep '^\$ScriptVersion' one-step-install.ps1 | head -n1 | sed 's/.*"\(.*\)".*/\1/')"
+          fi
+
           IFS='.' read -r major minor patch <<< "$current"
           patch=$((patch + 1))
           new="${major}.${minor}.${patch}"
-          sed -i "s/^\(\$ScriptVersion = \"\)${current}\"/\1${new}\"/" one-step-install.ps1
+
           echo "version=$new" >> "$GITHUB_OUTPUT"
           echo "tag=v${new}" >> "$GITHUB_OUTPUT"
+          echo "previous_tag=$latest_tag" >> "$GITHUB_OUTPUT"
 
-      - name: Commit version bump
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add one-step-install.ps1
-          git commit -m "chore: versie ophogen naar ${{ steps.version.outputs.version }} [skip release]"
-          git push origin master
-
-      - name: Build release notes
+      - name: Prepare release commit and notes
         id: notes
         shell: bash
         run: |
           set -euo pipefail
           tag="${{ steps.version.outputs.tag }}"
-          latest_tag="$(git tag -l 'v*' --sort=-v:refname | head -n 1)"
-          file=release_notes.md
+          version="${{ steps.version.outputs.version }}"
+          previous_tag="${{ steps.version.outputs.previous_tag }}"
+          release_sha="${{ github.sha }}"
+          notes_file="release_notes.md"
 
-          echo "## Wijzigingen in ${tag}" > "$file"
-          echo >> "$file"
+          sed -i "s/^\(\$ScriptVersion = \"\)[^\"]*\"/\1${version}\"/" one-step-install.ps1
 
-          if [[ -z "$latest_tag" ]]; then
-            echo "- Eerste release." >> "$file"
+          echo "## Wijzigingen in ${tag}" > "$notes_file"
+          echo >> "$notes_file"
+
+          if [[ -z "$previous_tag" ]]; then
+            echo "- Eerste release." >> "$notes_file"
           else
-            git log --no-merges --pretty=format:'- %s (%h)' "${latest_tag}..HEAD" >> "$file"
+            git log --no-merges --pretty=format:'- %s (%h)' "${previous_tag}..${release_sha}" >> "$notes_file"
           fi
 
-          echo "file=$file" >> "$GITHUB_OUTPUT"
-
-      - name: Create and push tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag "${{ steps.version.outputs.tag }}"
-          git push origin "${{ steps.version.outputs.tag }}"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          body_path: ${{ steps.notes.outputs.file }}
-
-      - name: Update CHANGELOG.md
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag="${{ steps.version.outputs.tag }}"
           date="$(date -u +%Y-%m-%d)"
-          notes_file="${{ steps.notes.outputs.file }}"
-
           if [[ ! -f CHANGELOG.md ]]; then
             printf '# Changelog\n\nAlle wijzigingen per release worden hier automatisch bijgehouden.\n\n' > CHANGELOG.md
           fi
@@ -96,6 +76,25 @@ jobs:
           } > "$tmp"
           mv "$tmp" CHANGELOG.md
 
-          git add CHANGELOG.md
-          git commit -m "docs: changelog bijgewerkt voor ${tag} [skip release]"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add one-step-install.ps1 CHANGELOG.md
+          git commit -m "chore(release): ${tag} [skip release]"
           git push origin master
+
+          echo "file=$notes_file" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          body_path: ${{ steps.notes.outputs.file }}
