@@ -11,6 +11,29 @@ Unattended script voor Windows Server zonder winget:
 irm "https://raw.githubusercontent.com/wmostert76/windows-server-edge-one-step/master/one-step-install.ps1" | iex
 ```
 
+## Troubleshooting: `irm` TLS / download error
+
+Op oudere Windows Server builds kan `Invoke-RestMethod` falen met:
+
+```text
+The underlying connection was closed: An unexpected error occurred on a send.
+```
+
+De actuele `one-step-install.ps1` forceert nu zelf TLS 1.2 voor de Edge API-call. Als de eerste bootstrap-download naar GitHub Raw faalt, forceer dan eerst TLS 1.2 en download het script lokaal:
+
+```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$script = "$env:TEMP\one-step-install.ps1"
+Invoke-WebRequest "https://raw.githubusercontent.com/wmostert76/windows-server-edge-one-step/master/one-step-install.ps1" -OutFile $script
+powershell -ExecutionPolicy Bypass -File $script
+```
+
+Snelle netwerkcheck als de download nog steeds mislukt:
+
+```powershell
+Test-NetConnection raw.githubusercontent.com -Port 443
+```
+
 ## Lokale run
 
 ```powershell

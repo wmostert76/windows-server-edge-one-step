@@ -1,4 +1,4 @@
-$ScriptVersion = "0.0.9"
+$ScriptVersion = "0.0.10"
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -17,6 +17,16 @@ if (-not $wpr.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)) 
 
 function Write-Log([string]$msg) {
     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $msg"
+}
+
+function Enable-Tls12 {
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Write-Log "TLS 1.2 geactiveerd voor web requests."
+    }
+    catch {
+        Write-Log "TLS 1.2 kon niet expliciet worden ingesteld: $($_.Exception.Message)"
+    }
 }
 
 function Get-UninstallEntries {
@@ -205,6 +215,7 @@ function Set-EdgeDefaultBrowser {
 }
 
 Write-Log "Start unattended Edge + browser cleanup script"
+Enable-Tls12
 $dir = "C:\ProgramData\EdgeDeploy"
 New-Item -Path $dir -ItemType Directory -Force | Out-Null
 if (Test-EdgeInstalled) {
